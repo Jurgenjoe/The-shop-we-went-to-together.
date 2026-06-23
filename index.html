@@ -167,6 +167,12 @@
   </div>
 </main>
 
+<!-- Lightbox -->
+<div id="lightbox" class="hidden fixed inset-0 z-50 bg-charcoal/80 modal-backdrop flex items-center justify-center p-4" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="" class="max-w-full max-h-full rounded-xl shadow-2xl object-contain" style="max-height:90vh;">
+  <button onclick="closeLightbox()" class="absolute top-4 right-5 text-white text-4xl leading-none opacity-70 hover:opacity-100">&times;</button>
+</div>
+
 <!-- Floating add button -->
 <button onclick="openForm()" class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-ember hover:bg-emberdk text-white text-3xl shadow-lg shadow-ember/30 flex items-center justify-center transition-transform hover:scale-105 z-30" aria-label="เพิ่มร้านใหม่">+</button>
 
@@ -274,6 +280,7 @@ let photoAction = 'keep'; // 'keep' | 'new' | 'remove'
 let pendingPhotoData = null; // base64 data url when photoAction === 'new'
 
 /* ---------- Boot sequence ---------- */
+const DEFAULT_SYNC_CODE = 'aom-ken-2026';
 function boot() {
   if (!db) {
     document.getElementById('setupNeeded').classList.remove('hidden');
@@ -281,8 +288,9 @@ function boot() {
   }
   syncCode = localStorage.getItem(SYNC_CODE_LOCAL_KEY);
   if (!syncCode) {
-    document.getElementById('syncGate').classList.remove('hidden');
-    return;
+    // ข้ามหน้ากรอกรหัส — ใช้รหัส default อัตโนมัติ
+    localStorage.setItem(SYNC_CODE_LOCAL_KEY, DEFAULT_SYNC_CODE);
+    syncCode = DEFAULT_SYNC_CODE;
   }
   startSync(syncCode);
 }
@@ -616,7 +624,7 @@ function renderFromCache() {
 
     return `
       <div class="card-enter bg-paper rounded-2xl shadow-sm border border-line overflow-hidden border-l-8 border-l-${accent} relative">
-        ${r.photo ? `<img src="${r.photo}" class="w-full h-36 object-cover" alt="${escapeAttr(r.name)}">` : ''}
+        ${r.photo ? `<img src="${r.photo}" class="w-full h-36 object-cover cursor-zoom-in" alt="${escapeAttr(r.name)}" onclick="openLightbox(this.src)" title="กดเพื่อดูรูปใหญ่">` : ''}
         <div class="ticket-notch"></div>
         <div class="p-4 pt-3">
           <div class="flex justify-between items-start gap-2">
@@ -655,6 +663,18 @@ function renderFromCache() {
       </div>
     `;
   }).join('');
+}
+
+/* ---------- Lightbox ---------- */
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.add('hidden');
+  document.getElementById('lightboxImg').src = '';
+  document.body.style.overflow = '';
 }
 
 function escapeHtml(str) {
