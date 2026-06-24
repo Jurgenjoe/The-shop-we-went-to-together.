@@ -65,6 +65,8 @@
   }
   .star-btn { transition: transform .12s ease; }
   .star-btn:hover { transform: scale(1.15); }
+  .page-btn { color: rgba(58,46,40,.55); }
+  .page-btn.active { background: #FFFDF9; color: #3A2E28; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
   .card-enter { animation: cardIn .25s ease both; }
   @keyframes cardIn {
     from { opacity: 0; transform: translateY(6px); }
@@ -124,48 +126,73 @@
   </div>
 </header>
 
-<!-- Tabs -->
-<nav class="px-5 max-w-5xl mx-auto">
-  <div class="flex gap-2 border-b border-line">
-    <button data-tab="all" class="tab-btn px-4 py-2.5 font-display text-lg rounded-t-xl -mb-px border-b-2 border-transparent text-charcoal/50 hover:text-charcoal" onclick="setTab('all')">ทั้งหมด</button>
-    <button data-tab="grill" class="tab-btn px-4 py-2.5 font-display text-lg rounded-t-xl -mb-px border-b-2 border-transparent text-charcoal/50 hover:text-charcoal" onclick="setTab('grill')">🔥 ปิ้งย่าง</button>
-    <button data-tab="shabu" class="tab-btn px-4 py-2.5 font-display text-lg rounded-t-xl -mb-px border-b-2 border-transparent text-charcoal/50 hover:text-charcoal" onclick="setTab('shabu')">🍲 ชาบู</button>
+<!-- Page switcher: visited log vs. wishlist of interesting places -->
+<div class="px-5 max-w-5xl mx-auto mt-1">
+  <div class="inline-flex bg-line/40 rounded-full p-1 gap-1">
+    <button id="pageBtn-visited" class="page-btn px-4 py-1.5 rounded-full text-sm font-medium transition-colors" onclick="setPage('visited')">📒 ร้านที่ไปด้วยกัน</button>
+    <button id="pageBtn-interesting" class="page-btn px-4 py-1.5 rounded-full text-sm font-medium transition-colors" onclick="setPage('interesting')">✨ ร้านที่น่าสนใจ</button>
   </div>
-</nav>
-
-<!-- Toolbar -->
-<div class="px-5 max-w-5xl mx-auto mt-4 flex flex-wrap items-center gap-3">
-  <select id="priceFilter" onchange="renderFromCache()" class="text-sm bg-paper border border-line rounded-full px-3 py-2 outline-none focus:ring-2 focus:ring-ember/40">
-    <option value="all">ทุกช่วงราคา</option>
-    <option value="lt300">ต่ำกว่า 300 บาท</option>
-    <option value="300-500">300–500 บาท</option>
-    <option value="500-800">500–800 บาท</option>
-    <option value="gt800">มากกว่า 800 บาท</option>
-  </select>
-
-  <select id="sortBy" onchange="renderFromCache()" class="text-sm bg-paper border border-line rounded-full px-3 py-2 outline-none focus:ring-2 focus:ring-ember/40">
-    <option value="recent">ล่าสุดก่อน</option>
-    <option value="priceAsc">ราคา: น้อย → มาก</option>
-    <option value="priceDesc">ราคา: มาก → น้อย</option>
-    <option value="valueDesc">คุ้มค่าสุดก่อน</option>
-  </select>
-
-  <span id="resultCount" class="text-xs text-charcoal/50 ml-auto"></span>
 </div>
 
-<!-- Card grid -->
-<main class="px-5 max-w-5xl mx-auto mt-5">
-  <div id="cardGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
-  <div id="emptyState" class="hidden text-center py-16">
-    <div class="text-5xl mb-3">🍽️</div>
-    <p class="font-display text-xl text-charcoal/60">ยังไม่มีร้านในหมวดนี้เลย</p>
-    <p class="text-sm text-charcoal/40 mt-1">กดปุ่ม + ด้านล่างเพื่อเพิ่มร้านแรกกันเลย</p>
+<!-- ===== PAGE: visited log ===== -->
+<div id="page-visited">
+  <!-- Tabs -->
+  <nav class="px-5 max-w-5xl mx-auto mt-3">
+    <div class="flex gap-2 border-b border-line">
+      <button data-tab="all" class="tab-btn px-4 py-2.5 font-display text-lg rounded-t-xl -mb-px border-b-2 border-transparent text-charcoal/50 hover:text-charcoal" onclick="setTab('all')">ทั้งหมด</button>
+      <button data-tab="grill" class="tab-btn px-4 py-2.5 font-display text-lg rounded-t-xl -mb-px border-b-2 border-transparent text-charcoal/50 hover:text-charcoal" onclick="setTab('grill')">🔥 ปิ้งย่าง</button>
+      <button data-tab="shabu" class="tab-btn px-4 py-2.5 font-display text-lg rounded-t-xl -mb-px border-b-2 border-transparent text-charcoal/50 hover:text-charcoal" onclick="setTab('shabu')">🍲 ชาบู</button>
+    </div>
+  </nav>
+
+  <!-- Toolbar -->
+  <div class="px-5 max-w-5xl mx-auto mt-4 flex flex-wrap items-center gap-3">
+    <select id="priceFilter" onchange="renderFromCache()" class="text-sm bg-paper border border-line rounded-full px-3 py-2 outline-none focus:ring-2 focus:ring-ember/40">
+      <option value="all">ทุกช่วงราคา</option>
+      <option value="lt300">ต่ำกว่า 300 บาท</option>
+      <option value="300-500">300–500 บาท</option>
+      <option value="500-800">500–800 บาท</option>
+      <option value="gt800">มากกว่า 800 บาท</option>
+    </select>
+
+    <select id="sortBy" onchange="renderFromCache()" class="text-sm bg-paper border border-line rounded-full px-3 py-2 outline-none focus:ring-2 focus:ring-ember/40">
+      <option value="recent">ล่าสุดก่อน</option>
+      <option value="priceAsc">ราคา: น้อย → มาก</option>
+      <option value="priceDesc">ราคา: มาก → น้อย</option>
+      <option value="valueDesc">คุ้มค่าสุดก่อน</option>
+    </select>
+
+    <span id="resultCount" class="text-xs text-charcoal/50 ml-auto"></span>
   </div>
-  <div id="loadingState" class="text-center py-16">
-    <div class="text-3xl mb-3 inline-block spin">⏳</div>
-    <p class="font-display text-xl text-charcoal/50">กำลังโหลดข้อมูล...</p>
-  </div>
-</main>
+
+  <!-- Card grid -->
+  <main class="px-5 max-w-5xl mx-auto mt-5">
+    <div id="cardGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    <div id="emptyState" class="hidden text-center py-16">
+      <div class="text-5xl mb-3">🍽️</div>
+      <p class="font-display text-xl text-charcoal/60">ยังไม่มีร้านในหมวดนี้เลย</p>
+      <p class="text-sm text-charcoal/40 mt-1">กดปุ่ม + ด้านล่างเพื่อเพิ่มร้านแรกกันเลย</p>
+    </div>
+    <div id="loadingState" class="text-center py-16">
+      <div class="text-3xl mb-3 inline-block spin">⏳</div>
+      <p class="font-display text-xl text-charcoal/50">กำลังโหลดข้อมูล...</p>
+    </div>
+  </main>
+</div>
+
+<!-- ===== PAGE: ร้านที่น่าสนใจ (wishlist จากรีวิวที่เห็นมา ยังไม่ได้ไปกิน) ===== -->
+<div id="page-interesting" class="hidden">
+  <p class="px-5 max-w-5xl mx-auto mt-3 text-sm text-charcoal/50">เก็บร้านที่เห็นรีวิวแล้วน่าลอง ใส่แค่รูป ลิงก์รีวิว และคำอธิบายสั้น ๆ พอ</p>
+
+  <main class="px-5 max-w-5xl mx-auto mt-4">
+    <div id="interestingGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    <div id="interestingEmpty" class="hidden text-center py-16">
+      <div class="text-5xl mb-3">✨</div>
+      <p class="font-display text-xl text-charcoal/60">ยังไม่มีร้านที่น่าสนใจเก็บไว้เลย</p>
+      <p class="text-sm text-charcoal/40 mt-1">กดปุ่ม + ด้านล่างเพื่อเก็บร้านแรกกันเลย</p>
+    </div>
+  </main>
+</div>
 
 <!-- Lightbox -->
 <div id="lightbox" class="hidden fixed inset-0 z-50 bg-charcoal/80 modal-backdrop flex items-center justify-center p-4" onclick="closeLightbox()">
@@ -174,7 +201,7 @@
 </div>
 
 <!-- Floating add button -->
-<button onclick="openForm()" class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-ember hover:bg-emberdk text-white text-3xl shadow-lg shadow-ember/30 flex items-center justify-center transition-transform hover:scale-105 z-30" aria-label="เพิ่มร้านใหม่">+</button>
+<button onclick="handleAddClick()" class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-ember hover:bg-emberdk text-white text-3xl shadow-lg shadow-ember/30 flex items-center justify-center transition-transform hover:scale-105 z-30" aria-label="เพิ่มร้านใหม่">+</button>
 
 <!-- Modal -->
 <div id="modalBackdrop" class="hidden fixed inset-0 bg-charcoal/40 modal-backdrop z-40 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -207,8 +234,8 @@
         <input id="f_price" required type="number" min="0" step="1" placeholder="299" class="w-full px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
       </div>
       <div class="flex-1">
-        <label class="block text-sm font-medium mb-1">ป้ายราคา (ถ้ามี)</label>
-        <input id="f_priceLabel" type="text" placeholder="เช่น 799+ บุฟเฟ่ต์" class="w-full px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
+        <label class="block text-sm font-medium mb-1">หมายเหตุ</label>
+        <input id="f_priceLabel" type="text" placeholder="เช่น ต้องจองล่วงหน้า, มีบุฟเฟ่ต์ 799+" class="w-full px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
       </div>
     </div>
 
@@ -244,6 +271,42 @@
   </form>
 </div>
 
+<!-- Modal: ร้านที่น่าสนใจ -->
+<div id="interestingModalBackdrop" class="hidden fixed inset-0 bg-charcoal/40 modal-backdrop z-40 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <form id="interestingForm" onsubmit="submitInterestingForm(event)" class="bg-paper w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto p-6 shadow-2xl">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="interestingFormTitle" class="font-display text-2xl text-emberdk">เก็บร้านที่น่าสนใจ</h2>
+      <button type="button" onclick="closeInterestingForm()" class="text-charcoal/40 hover:text-charcoal text-2xl leading-none">&times;</button>
+    </div>
+
+    <input type="hidden" id="editIntId">
+
+    <label class="block text-sm font-medium mb-1">ชื่อร้าน *</label>
+    <input id="i_name" required type="text" placeholder="เช่น ชาบูเจ้าใหม่ที่เห็นในรีวิว" class="w-full mb-3 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
+
+    <label class="block text-sm font-medium mb-1">รูป (ถ้ามี)</label>
+    <div class="mb-3">
+      <div id="iPhotoPreviewWrap" class="hidden relative inline-block mb-2">
+        <img id="iPhotoPreview" class="h-28 w-40 object-cover rounded-lg border border-line" alt="">
+        <button type="button" onclick="removeInterestingPhoto()" class="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-charcoal/70 hover:bg-sauce text-white text-xs flex items-center justify-center" title="ลบรูป">&times;</button>
+      </div>
+      <input id="i_photo" type="file" accept="image/*" onchange="handleInterestingPhotoSelect(event)" class="w-full text-sm px-3 py-2 rounded-lg border border-line bg-white file:mr-3 file:px-3 file:py-1.5 file:rounded-full file:border-0 file:bg-ember file:text-white file:text-xs file:cursor-pointer cursor-pointer">
+      <p id="iPhotoHint" class="text-xs text-charcoal/40 mt-1"></p>
+    </div>
+
+    <label class="block text-sm font-medium mb-1">คำอธิบายสั้น ๆ</label>
+    <textarea id="i_desc" rows="2" placeholder="จุดเด่นที่เห็นจากรีวิว..." class="w-full mb-3 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none"></textarea>
+
+    <label class="block text-sm font-medium mb-1">ลิงก์รีวิว</label>
+    <input id="i_reviewLink" type="url" placeholder="https://..." class="w-full mb-5 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
+
+    <div class="flex gap-2">
+      <button type="submit" id="interestingSubmitBtn" class="flex-1 bg-ember hover:bg-emberdk text-white rounded-lg py-2.5 font-medium">บันทึก</button>
+      <button type="button" onclick="closeInterestingForm()" class="px-5 rounded-lg border border-line text-charcoal/60 hover:bg-line/30">ยกเลิก</button>
+    </div>
+  </form>
+</div>
+
 <script>
 /* =========================================================================
    1) FIREBASE SETUP — fill this in with YOUR project's config.
@@ -275,9 +338,12 @@ const SYNC_CODE_LOCAL_KEY = 'foodlogSyncCode_v1'; // remembers the code on THIS 
 let syncCode = null;
 let unsubscribe = null;
 let cachedData = [];
-let state = { tab: 'all', valueScore: 0, sauceScore: 0 };
+let cachedInteresting = [];
+let state = { tab: 'all', page: 'visited', valueScore: 0, sauceScore: 0 };
 let photoAction = 'keep'; // 'keep' | 'new' | 'remove'
 let pendingPhotoData = null; // base64 data url when photoAction === 'new'
+let intPhotoAction = 'keep';
+let intPendingPhotoData = null;
 
 /* ---------- Boot sequence ---------- */
 const DEFAULT_SYNC_CODE = 'aom-ken-2026';
@@ -325,10 +391,13 @@ function startSync(code) {
   if (unsubscribe) unsubscribe();
   unsubscribe = db.collection('foodlogs').doc(code).onSnapshot(
     snap => {
-      cachedData = (snap.exists && Array.isArray(snap.data().restaurants)) ? snap.data().restaurants : [];
+      const data = snap.exists ? snap.data() : {};
+      cachedData = Array.isArray(data.restaurants) ? data.restaurants : [];
+      cachedInteresting = Array.isArray(data.interesting) ? data.interesting : [];
       document.getElementById('loadingState').classList.add('hidden');
       setSyncStatus('saved');
       renderFromCache();
+      renderInteresting();
     },
     err => {
       console.error('Firestore listen error:', err);
@@ -339,14 +408,13 @@ function startSync(code) {
 }
 
 /* ---------- Write helper ---------- */
-async function persist(newData) {
-  cachedData = newData;
-  renderFromCache(); // optimistic UI update
+async function persistAll() {
   if (!db || !syncCode) return;
   setSyncStatus('saving');
   try {
     await db.collection('foodlogs').doc(syncCode).set({
-      restaurants: newData,
+      restaurants: cachedData,
+      interesting: cachedInteresting,
       updatedAt: Date.now()
     });
     setSyncStatus('saved');
@@ -355,6 +423,18 @@ async function persist(newData) {
     setSyncStatus('error');
     alert('บันทึกขึ้นคลาวด์ไม่สำเร็จ เช็คอินเทอร์เน็ต หรือดูว่าตั้งค่า Firebase ถูกต้องไหมนะ');
   }
+}
+
+async function persist(newData) {
+  cachedData = newData;
+  renderFromCache(); // optimistic UI update
+  await persistAll();
+}
+
+async function persistInteresting(newData) {
+  cachedInteresting = newData;
+  renderInteresting(); // optimistic UI update
+  await persistAll();
 }
 
 function setSyncStatus(s) {
@@ -425,6 +505,20 @@ function removePhoto() {
   pendingPhotoData = null;
   document.getElementById('photoPreviewWrap').classList.add('hidden');
   document.getElementById('photoPreview').src = '';
+}
+
+/* ---------- Page switcher (visited log vs. wishlist) ---------- */
+function setPage(page) {
+  state.page = page;
+  document.getElementById('pageBtn-visited').classList.toggle('active', page === 'visited');
+  document.getElementById('pageBtn-interesting').classList.toggle('active', page === 'interesting');
+  document.getElementById('page-visited').classList.toggle('hidden', page !== 'visited');
+  document.getElementById('page-interesting').classList.toggle('hidden', page !== 'interesting');
+}
+
+function handleAddClick() {
+  if (state.page === 'interesting') openInterestingForm();
+  else openForm();
 }
 
 /* ---------- Tabs ---------- */
@@ -551,6 +645,145 @@ async function deleteRecord(id) {
   await persist(cachedData.filter(r => r.id !== id));
 }
 
+/* ---------- ร้านที่น่าสนใจ (wishlist): photo handling ---------- */
+function showInterestingPhotoPreview(dataUrl) {
+  document.getElementById('iPhotoPreview').src = dataUrl;
+  document.getElementById('iPhotoPreviewWrap').classList.remove('hidden');
+}
+
+async function handleInterestingPhotoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const hint = document.getElementById('iPhotoHint');
+  hint.textContent = 'กำลังย่อรูป...';
+  try {
+    const dataUrl = await compressImage(file, 900, 0.7);
+    intPendingPhotoData = dataUrl;
+    intPhotoAction = 'new';
+    showInterestingPhotoPreview(dataUrl);
+    hint.textContent = '';
+  } catch (err) {
+    console.error(err);
+    hint.textContent = '';
+    alert('โหลดรูปนี้ไม่สำเร็จ ลองรูปอื่นดูนะ');
+  }
+  event.target.value = '';
+}
+
+function removeInterestingPhoto() {
+  intPhotoAction = 'remove';
+  intPendingPhotoData = null;
+  document.getElementById('iPhotoPreviewWrap').classList.add('hidden');
+  document.getElementById('iPhotoPreview').src = '';
+}
+
+/* ---------- ร้านที่น่าสนใจ (wishlist): modal open/close ---------- */
+function openInterestingForm(editing) {
+  document.getElementById('interestingForm').reset();
+  document.getElementById('editIntId').value = '';
+  document.getElementById('interestingFormTitle').textContent = 'เก็บร้านที่น่าสนใจ';
+  intPhotoAction = 'keep';
+  intPendingPhotoData = null;
+  document.getElementById('iPhotoPreviewWrap').classList.add('hidden');
+  document.getElementById('iPhotoPreview').src = '';
+  document.getElementById('iPhotoHint').textContent = '';
+
+  if (editing) {
+    document.getElementById('interestingFormTitle').textContent = 'แก้ไขร้านที่น่าสนใจ';
+    document.getElementById('editIntId').value = editing.id;
+    document.getElementById('i_name').value = editing.name;
+    document.getElementById('i_desc').value = editing.description || '';
+    document.getElementById('i_reviewLink').value = editing.reviewLink || '';
+    if (editing.photo) showInterestingPhotoPreview(editing.photo);
+  }
+
+  document.getElementById('interestingModalBackdrop').classList.remove('hidden');
+}
+function closeInterestingForm() {
+  document.getElementById('interestingModalBackdrop').classList.add('hidden');
+}
+
+async function submitInterestingForm(e) {
+  e.preventDefault();
+  const submitBtn = document.getElementById('interestingSubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'กำลังบันทึก...';
+
+  const id = document.getElementById('editIntId').value;
+  const existing = id ? cachedInteresting.find(r => r.id === id) : null;
+  let photo = existing ? (existing.photo || null) : null;
+  if (intPhotoAction === 'new') photo = intPendingPhotoData;
+  else if (intPhotoAction === 'remove') photo = null;
+
+  const record = {
+    id: id || uid(),
+    name: document.getElementById('i_name').value.trim(),
+    description: document.getElementById('i_desc').value.trim(),
+    reviewLink: document.getElementById('i_reviewLink').value.trim(),
+    photo: photo,
+    createdAt: id ? (existing?.createdAt || Date.now()) : Date.now(),
+  };
+
+  let updated;
+  if (id) {
+    updated = cachedInteresting.map(r => r.id === id ? record : r);
+  } else {
+    updated = [...cachedInteresting, record];
+  }
+  await persistInteresting(updated);
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'บันทึก';
+  closeInterestingForm();
+}
+
+function editInteresting(id) {
+  const rec = cachedInteresting.find(r => r.id === id);
+  if (rec) openInterestingForm(rec);
+}
+
+async function deleteInteresting(id) {
+  if (!confirm('ลบร้านนี้ออกจากรายการที่น่าสนใจเลยไหม?')) return;
+  await persistInteresting(cachedInteresting.filter(r => r.id !== id));
+}
+
+/* ---------- ร้านที่น่าสนใจ (wishlist): render ---------- */
+function renderInteresting() {
+  const grid = document.getElementById('interestingGrid');
+  const empty = document.getElementById('interestingEmpty');
+  if (!grid) return; // not on this page yet during initial paint
+
+  const sorted = [...cachedInteresting].sort((a, b) => b.createdAt - a.createdAt);
+
+  if (sorted.length === 0) {
+    grid.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  grid.innerHTML = sorted.map(r => `
+    <div class="card-enter bg-paper rounded-2xl shadow-sm border border-line overflow-hidden border-l-8 border-l-gold relative">
+      ${r.photo ? `<img src="${r.photo}" class="w-full h-36 object-cover cursor-zoom-in" alt="${escapeAttr(r.name)}" onclick="openLightbox(this.src)" title="กดเพื่อดูรูปใหญ่">` : `<div class="w-full h-20 flex items-center justify-center text-3xl bg-cream">✨</div>`}
+      <div class="ticket-notch"></div>
+      <div class="p-4 pt-3">
+        <div class="flex justify-between items-start gap-2">
+          <h3 class="font-display text-xl text-emberdk leading-snug">${escapeHtml(r.name)}</h3>
+          <div class="flex gap-1 shrink-0">
+            <button onclick="editInteresting('${r.id}')" class="text-charcoal/30 hover:text-charcoal text-sm" title="แก้ไข">✏️</button>
+            <button onclick="deleteInteresting('${r.id}')" class="text-charcoal/30 hover:text-sauce text-sm" title="ลบ">🗑️</button>
+          </div>
+        </div>
+
+        ${r.description ? `<p class="mt-2 text-sm text-charcoal/70">${escapeHtml(r.description)}</p>` : ''}
+
+        <div class="mt-4">
+          ${r.reviewLink ? `<a href="${escapeAttr(r.reviewLink)}" target="_blank" class="block text-center text-xs font-medium border border-gold text-emberdk rounded-full py-1.5 hover:bg-gold/10">🔗 ดูรีวิว</a>` : `<span class="block text-center text-xs text-charcoal/30 border border-line rounded-full py-1.5">🔗 ไม่มีลิงก์รีวิว</span>`}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
 /* ---------- Export / Import (manual JSON backup, handy alongside cloud sync) ---------- */
 function exportData() {
   const blob = new Blob([JSON.stringify(cachedData, null, 2)], { type: 'application/json' });
@@ -620,7 +853,7 @@ function renderFromCache() {
     const accent = isGrill ? 'ember' : 'broth';
     const accentDk = isGrill ? 'emberdk' : 'brothdk';
     const emoji = isGrill ? '🔥' : '🍲';
-    const priceText = r.priceLabel ? r.priceLabel : `${r.price} บาท/คน`;
+    const priceText = `${r.price} บาท/คน`;
 
     return `
       <div class="card-enter bg-paper rounded-2xl shadow-sm border border-line overflow-hidden border-l-8 border-l-${accent} relative">
@@ -638,6 +871,7 @@ function renderFromCache() {
           <div class="mt-2">
             <span class="price-tag inline-block bg-gold/90 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm">${escapeHtml(priceText)}</span>
           </div>
+          ${r.priceLabel ? `<p class="text-xs text-charcoal/50 mt-1.5">📝 ${escapeHtml(r.priceLabel)}</p>` : ''}
 
           <div class="mt-3 text-sm space-y-1">
             <div class="flex items-center gap-2">
@@ -686,6 +920,7 @@ function escapeAttr(str) {
 
 /* ---------- Init ---------- */
 setTab('all');
+setPage('visited');
 boot();
 </script>
 </body>
