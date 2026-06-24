@@ -336,7 +336,8 @@ if (CONFIG_READY) {
 
 const SYNC_CODE_LOCAL_KEY = 'foodlogSyncCode_v1'; // remembers the code on THIS device only
 let syncCode = null;
-let unsubscribe = null;
+let unsubscribeRestaurants = null;
+let unsubscribeInteresting = null;
 let cachedData = [];
 let cachedInteresting = [];
 let state = { tab: 'all', page: 'visited', valueScore: 0, sauceScore: 0 };
@@ -384,39 +385,91 @@ function changeSyncCode() {
   }
 }
 
-function startSync(code) {
+/* ---------- One-time migration: old single-doc arrays -> one Firestore doc per item.
+   (Storing every restaurant + photo inside ONE document hit Firestore's 1MiB-per-document
+   limit once enough photos piled up — that's why saving started failing. Splitting into a
+   subcollection means each restaurant is its own small document, so the limit is never hit
+   no matter how many places get added.) ---------- */
+async function migrateLegacyDocIfNeeded(code) {
+  try {
+    const ref = db.collection('foodlogs').doc(code);
+    const snap = await ref.get();
+    if (!snap.exists) return;
+    const data = snap.data();
+    const legacyRestaurants = Array.isArray(data.restaurants) ? data.restaurants : [];
+    const legacyInteresting = Array.isArray(data.interesting) ? data.interesting : [];
+    if (legacyRestaurants.length === 0 && legacyInteresting.length === 0) return;
+
+    const batch = db.batch();
+    legacyRestaurants.forEach(r => { if (r && r.id) batch.set(ref.collection('restaurants').doc(r.id), r); });
+    legacyInteresting.forEach(r => { if (r && r.id) batch.set(ref.collection('interesting').doc(r.id), r); });
+    batch.update(ref, {
+      restaurants: firebase.firestore.FieldValue.delete(),
+      interesting: firebase.firestore.FieldValue.delete()
+    });
+    await batch.commit();
+    console.log(`ย้ายข้อมูลเก่าเรียบร้อย: ${legacyRestaurants.length} ร้าน, ${legacyInteresting.length} ร้านที่น่าสนใจ`);
+  } catch (err) {
+    console.error('Migration error (will retry next load):', err);
+  }
+}
+
+async function startSync(code) {
   syncCode = code;
   document.getElementById('syncCodeChip').textContent = '🔗 ' + code;
   document.getElementById('loadingState').classList.remove('hidden');
-  if (unsubscribe) unsubscribe();
-  unsubscribe = db.collection('foodlogs').doc(code).onSnapshot(
+  if (unsubscribeRestaurants) unsubscribeRestaurants();
+  if (unsubscribeInteresting) unsubscribeInteresting();
+
+  await migrateLegacyDocIfNeeded(code);
+
+  let restaurantsLoaded = false;
+  let interestingLoaded = false;
+  const maybeHideLoading = () => {
+    if (restaurantsLoaded && interestingLoaded) document.getElementById('loadingState').classList.add('hidden');
+  };
+
+  unsubscribeRestaurants = db.collection('foodlogs').doc(code).collection('restaurants').onSnapshot(
     snap => {
-      const data = snap.exists ? snap.data() : {};
-      cachedData = Array.isArray(data.restaurants) ? data.restaurants : [];
-      cachedInteresting = Array.isArray(data.interesting) ? data.interesting : [];
-      document.getElementById('loadingState').classList.add('hidden');
+      cachedData = snap.docs.map(d => d.data());
+      restaurantsLoaded = true;
+      maybeHideLoading();
       setSyncStatus('saved');
       renderFromCache();
+    },
+    err => {
+      console.error('Firestore listen error (restaurants):', err);
+      restaurantsLoaded = true;
+      maybeHideLoading();
+      setSyncStatus('error');
+    }
+  );
+
+  unsubscribeInteresting = db.collection('foodlogs').doc(code).collection('interesting').onSnapshot(
+    snap => {
+      cachedInteresting = snap.docs.map(d => d.data());
+      interestingLoaded = true;
+      maybeHideLoading();
       renderInteresting();
     },
     err => {
-      console.error('Firestore listen error:', err);
-      document.getElementById('loadingState').classList.add('hidden');
-      setSyncStatus('error');
+      console.error('Firestore listen error (interesting):', err);
+      interestingLoaded = true;
+      maybeHideLoading();
     }
   );
 }
 
-/* ---------- Write helper ---------- */
-async function persistAll() {
+/* ---------- Write helpers (one Firestore doc per restaurant/wishlist item) ---------- */
+async function saveRestaurant(record) {
+  const idx = cachedData.findIndex(r => r.id === record.id);
+  if (idx >= 0) cachedData[idx] = record; else cachedData.push(record);
+  renderFromCache(); // optimistic UI update
+
   if (!db || !syncCode) return;
   setSyncStatus('saving');
   try {
-    await db.collection('foodlogs').doc(syncCode).set({
-      restaurants: cachedData,
-      interesting: cachedInteresting,
-      updatedAt: Date.now()
-    });
+    await db.collection('foodlogs').doc(syncCode).collection('restaurants').doc(record.id).set(record);
     setSyncStatus('saved');
   } catch (err) {
     console.error('Firestore save error:', err);
@@ -425,16 +478,53 @@ async function persistAll() {
   }
 }
 
-async function persist(newData) {
-  cachedData = newData;
-  renderFromCache(); // optimistic UI update
-  await persistAll();
+async function removeRestaurant(id) {
+  cachedData = cachedData.filter(r => r.id !== id);
+  renderFromCache();
+
+  if (!db || !syncCode) return;
+  setSyncStatus('saving');
+  try {
+    await db.collection('foodlogs').doc(syncCode).collection('restaurants').doc(id).delete();
+    setSyncStatus('saved');
+  } catch (err) {
+    console.error('Firestore delete error:', err);
+    setSyncStatus('error');
+    alert('ลบข้อมูลบนคลาวด์ไม่สำเร็จ เช็คอินเทอร์เน็ตนะ');
+  }
 }
 
-async function persistInteresting(newData) {
-  cachedInteresting = newData;
+async function saveInteresting(record) {
+  const idx = cachedInteresting.findIndex(r => r.id === record.id);
+  if (idx >= 0) cachedInteresting[idx] = record; else cachedInteresting.push(record);
   renderInteresting(); // optimistic UI update
-  await persistAll();
+
+  if (!db || !syncCode) return;
+  setSyncStatus('saving');
+  try {
+    await db.collection('foodlogs').doc(syncCode).collection('interesting').doc(record.id).set(record);
+    setSyncStatus('saved');
+  } catch (err) {
+    console.error('Firestore save error:', err);
+    setSyncStatus('error');
+    alert('บันทึกขึ้นคลาวด์ไม่สำเร็จ เช็คอินเทอร์เน็ต หรือดูว่าตั้งค่า Firebase ถูกต้องไหมนะ');
+  }
+}
+
+async function removeInteresting(id) {
+  cachedInteresting = cachedInteresting.filter(r => r.id !== id);
+  renderInteresting();
+
+  if (!db || !syncCode) return;
+  setSyncStatus('saving');
+  try {
+    await db.collection('foodlogs').doc(syncCode).collection('interesting').doc(id).delete();
+    setSyncStatus('saved');
+  } catch (err) {
+    console.error('Firestore delete error:', err);
+    setSyncStatus('error');
+    alert('ลบข้อมูลบนคลาวด์ไม่สำเร็จ เช็คอินเทอร์เน็ตนะ');
+  }
 }
 
 function setSyncStatus(s) {
@@ -637,13 +727,7 @@ async function submitForm(e) {
     createdAt: id ? (existing?.createdAt || Date.now()) : Date.now(),
   };
 
-  let updated;
-  if (id) {
-    updated = cachedData.map(r => r.id === id ? record : r);
-  } else {
-    updated = [...cachedData, record];
-  }
-  await persist(updated);
+  await saveRestaurant(record);
   submitBtn.disabled = false;
   submitBtn.textContent = 'บันทึก';
   closeForm();
@@ -656,7 +740,7 @@ function editRecord(id) {
 
 async function deleteRecord(id) {
   if (!confirm('ลบร้านนี้ออกจากรายการเลยไหม?')) return;
-  await persist(cachedData.filter(r => r.id !== id));
+  await removeRestaurant(id);
 }
 
 /* ---------- ร้านที่น่าสนใจ (wishlist): photo handling ---------- */
@@ -738,13 +822,7 @@ async function submitInterestingForm(e) {
     createdAt: id ? (existing?.createdAt || Date.now()) : Date.now(),
   };
 
-  let updated;
-  if (id) {
-    updated = cachedInteresting.map(r => r.id === id ? record : r);
-  } else {
-    updated = [...cachedInteresting, record];
-  }
-  await persistInteresting(updated);
+  await saveInteresting(record);
   submitBtn.disabled = false;
   submitBtn.textContent = 'บันทึก';
   closeInterestingForm();
@@ -757,7 +835,7 @@ function editInteresting(id) {
 
 async function deleteInteresting(id) {
   if (!confirm('ลบร้านนี้ออกจากรายการที่น่าสนใจเลยไหม?')) return;
-  await persistInteresting(cachedInteresting.filter(r => r.id !== id));
+  await removeInteresting(id);
 }
 
 /* ---------- ร้านที่น่าสนใจ (wishlist): render ---------- */
@@ -814,8 +892,10 @@ function importData(event) {
     try {
       const incoming = JSON.parse(reader.result);
       if (!Array.isArray(incoming)) throw new Error('invalid');
-      const merged = [...cachedData, ...incoming.filter(i => !cachedData.some(e => e.id === i.id))];
-      await persist(merged);
+      const newOnes = incoming.filter(i => i && i.id && !cachedData.some(e => e.id === i.id));
+      for (const item of newOnes) {
+        await saveRestaurant(item);
+      }
       alert('นำเข้าข้อมูลเรียบร้อยแล้ว 🎉');
     } catch {
       alert('ไฟล์นี้เปิดไม่ได้ ลองเช็กไฟล์อีกครั้งนะ');
