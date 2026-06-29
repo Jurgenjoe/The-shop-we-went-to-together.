@@ -261,7 +261,10 @@
     <input id="f_menuLink" type="url" placeholder="https://..." class="w-full mb-3 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
 
     <label class="block text-sm font-medium mb-1">ลิงก์ Google Maps</label>
-    <input id="f_mapLink" type="url" placeholder="https://maps.google.com/..." class="w-full mb-5 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
+    <input id="f_mapLink" type="url" placeholder="https://maps.google.com/..." class="w-full mb-3 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
+
+    <label class="block text-sm font-medium mb-1">เพจ Facebook</label>
+    <input id="f_fbLink" type="url" placeholder="https://facebook.com/..." class="w-full mb-5 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
 
     <div class="flex gap-2">
       <button type="submit" id="submitBtn" class="flex-1 bg-ember hover:bg-emberdk text-white rounded-lg py-2.5 font-medium">บันทึก</button>
@@ -297,7 +300,10 @@
     <textarea id="i_desc" rows="2" placeholder="จุดเด่นที่เห็นจากรีวิว..." class="w-full mb-3 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none"></textarea>
 
     <label class="block text-sm font-medium mb-1">ลิงก์รีวิว</label>
-    <input id="i_reviewLink" type="url" placeholder="https://..." class="w-full mb-5 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
+    <input id="i_reviewLink" type="url" placeholder="https://..." class="w-full mb-3 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
+
+    <label class="block text-sm font-medium mb-1">เพจ Facebook</label>
+    <input id="i_fbLink" type="url" placeholder="https://facebook.com/..." class="w-full mb-5 px-3 py-2 rounded-lg border border-line bg-white focus:ring-2 focus:ring-ember/40 outline-none">
 
     <div class="flex gap-2">
       <button type="submit" id="interestingSubmitBtn" class="flex-1 bg-ember hover:bg-emberdk text-white rounded-lg py-2.5 font-medium">บันทึก</button>
@@ -682,6 +688,7 @@ function openForm(editing) {
     document.getElementById('f_review').value = editing.review || '';
     document.getElementById('f_menuLink').value = editing.menuLink || '';
     document.getElementById('f_mapLink').value = editing.mapLink || '';
+    document.getElementById('f_fbLink').value = editing.fbLink || '';
     state.valueScore = editing.valueScore || 0;
     state.sauceScore = editing.sauceScore || 0;
     if (editing.photo) showPhotoPreview(editing.photo);
@@ -724,6 +731,7 @@ async function submitForm(e) {
     review: document.getElementById('f_review').value.trim(),
     menuLink: document.getElementById('f_menuLink').value.trim(),
     mapLink: document.getElementById('f_mapLink').value.trim(),
+    fbLink: document.getElementById('f_fbLink').value.trim(),
     photo: photo,
     createdAt: id ? (existing?.createdAt || Date.now()) : Date.now(),
   };
@@ -799,6 +807,7 @@ function openInterestingForm(editing) {
     document.getElementById('i_name').value = editing.name;
     document.getElementById('i_desc').value = editing.description || '';
     document.getElementById('i_reviewLink').value = editing.reviewLink || '';
+    document.getElementById('i_fbLink').value = editing.fbLink || '';
     if (editing.photo) showInterestingPhotoPreview(editing.photo);
   }
 
@@ -825,6 +834,7 @@ async function submitInterestingForm(e) {
     name: document.getElementById('i_name').value.trim(),
     description: document.getElementById('i_desc').value.trim(),
     reviewLink: document.getElementById('i_reviewLink').value.trim(),
+    fbLink: document.getElementById('i_fbLink').value.trim(),
     photo: photo,
     createdAt: id ? (existing?.createdAt || Date.now()) : Date.now(),
   };
@@ -857,6 +867,7 @@ function convertToVisited(id) {
   document.getElementById('formTitle').textContent = 'ไปแล้ว! ใส่รีวิวร้านนี้ 🎉';
   document.getElementById('f_name').value = rec.name || '';
   if (rec.description) document.getElementById('f_review').value = rec.description;
+  if (rec.fbLink) document.getElementById('f_fbLink').value = rec.fbLink;
   if (rec.photo) {
     pendingPhotoData = rec.photo;
     photoAction = 'new';
@@ -896,7 +907,10 @@ function renderInteresting() {
 
         <div class="mt-4 space-y-2">
           <button onclick="convertToVisited('${r.id}')" class="block w-full text-center text-xs font-medium bg-ember text-white rounded-full py-1.5 hover:bg-emberdk">✅ ไปแล้ว! ใส่รีวิว</button>
-          ${r.reviewLink ? `<a href="${escapeAttr(r.reviewLink)}" target="_blank" class="block text-center text-xs font-medium border border-gold text-emberdk rounded-full py-1.5 hover:bg-gold/10">🔗 ดูรีวิว</a>` : `<span class="block text-center text-xs text-charcoal/30 border border-line rounded-full py-1.5">🔗 ไม่มีลิงก์รีวิว</span>`}
+          <div class="flex gap-2">
+            ${r.reviewLink ? `<a href="${escapeAttr(r.reviewLink)}" target="_blank" class="flex-1 text-center text-xs font-medium border border-gold text-emberdk rounded-full py-1.5 hover:bg-gold/10">🔗 ดูรีวิว</a>` : `<span class="flex-1 text-center text-xs text-charcoal/30 border border-line rounded-full py-1.5">🔗 ไม่มีลิงก์รีวิว</span>`}
+            ${r.fbLink ? `<a href="${escapeAttr(r.fbLink)}" target="_blank" class="flex-1 text-center text-xs font-medium border border-[#1877F2] text-[#1877F2] rounded-full py-1.5 hover:bg-[#1877F2]/10">📘 Facebook</a>` : ''}
+          </div>
         </div>
       </div>
     </div>
@@ -1017,9 +1031,10 @@ function renderFromCache() {
             “${escapeHtml(r.review)}”
           </div>` : ''}
 
-          <div class="flex gap-2 mt-4">
-            ${r.menuLink ? `<a href="${escapeAttr(r.menuLink)}" target="_blank" class="flex-1 text-center text-xs font-medium border border-${accent} text-${accentDk} rounded-full py-1.5 hover:bg-${accent}/10">📋 ดูเมนู</a>` : `<span class="flex-1 text-center text-xs text-charcoal/30 border border-line rounded-full py-1.5">📋 ไม่มีเมนู</span>`}
-            ${r.mapLink ? `<a href="${escapeAttr(r.mapLink)}" target="_blank" class="flex-1 text-center text-xs font-medium border border-${accent} text-${accentDk} rounded-full py-1.5 hover:bg-${accent}/10">📍 แผนที่</a>` : `<span class="flex-1 text-center text-xs text-charcoal/30 border border-line rounded-full py-1.5">📍 ไม่มีแผนที่</span>`}
+          <div class="flex flex-wrap gap-2 mt-4">
+            ${r.menuLink ? `<a href="${escapeAttr(r.menuLink)}" target="_blank" class="flex-1 min-w-[88px] text-center text-xs font-medium border border-${accent} text-${accentDk} rounded-full py-1.5 hover:bg-${accent}/10">📋 ดูเมนู</a>` : `<span class="flex-1 min-w-[88px] text-center text-xs text-charcoal/30 border border-line rounded-full py-1.5">📋 ไม่มีเมนู</span>`}
+            ${r.mapLink ? `<a href="${escapeAttr(r.mapLink)}" target="_blank" class="flex-1 min-w-[88px] text-center text-xs font-medium border border-${accent} text-${accentDk} rounded-full py-1.5 hover:bg-${accent}/10">📍 แผนที่</a>` : `<span class="flex-1 min-w-[88px] text-center text-xs text-charcoal/30 border border-line rounded-full py-1.5">📍 ไม่มีแผนที่</span>`}
+            ${r.fbLink ? `<a href="${escapeAttr(r.fbLink)}" target="_blank" class="flex-1 min-w-[88px] text-center text-xs font-medium border border-[#1877F2] text-[#1877F2] rounded-full py-1.5 hover:bg-[#1877F2]/10">📘 Facebook</a>` : ''}
           </div>
         </div>
       </div>
