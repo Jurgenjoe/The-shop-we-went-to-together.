@@ -74,7 +74,6 @@
   }
   .modal-backdrop { backdrop-filter: blur(2px); }
   .spin { animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-thumb { background: #E8DCC8; border-radius: 8px; }
 </style>
@@ -345,6 +344,7 @@ let photoAction = 'keep'; // 'keep' | 'new' | 'remove'
 let pendingPhotoData = null; // base64 data url when photoAction === 'new'
 let intPhotoAction = 'keep';
 let intPendingPhotoData = null;
+let convertFromInterestingId = null; // set when opening the visited-form from an "interesting" card, so we know to remove the wishlist entry after saving
 
 /* ---------- Boot sequence ---------- */
 const DEFAULT_SYNC_CODE = 'aom-ken-2026';
@@ -666,6 +666,7 @@ function openForm(editing) {
   state.sauceScore = 0;
   photoAction = 'keep';
   pendingPhotoData = null;
+  convertFromInterestingId = null;
   document.getElementById('photoPreviewWrap').classList.add('hidden');
   document.getElementById('photoPreview').src = '';
   document.getElementById('photoHint').textContent = '';
@@ -728,6 +729,12 @@ async function submitForm(e) {
   };
 
   await saveRestaurant(record);
+
+  if (convertFromInterestingId) {
+    await removeInteresting(convertFromInterestingId);
+    convertFromInterestingId = null;
+  }
+
   submitBtn.disabled = false;
   submitBtn.textContent = 'บันทึก';
   closeForm();
@@ -838,6 +845,25 @@ async function deleteInteresting(id) {
   await removeInteresting(id);
 }
 
+/* ---------- ร้านที่น่าสนใจ -> ร้านที่ไปด้วยกัน: เปิดฟอร์มรีวิวเต็มเมื่อไปกินแล้ว ---------- */
+function convertToVisited(id) {
+  const rec = cachedInteresting.find(r => r.id === id);
+  if (!rec) return;
+
+  setPage('visited');
+  openForm(); // reset to a fresh "add" form first
+  convertFromInterestingId = id; // must be set AFTER openForm(), since openForm() clears it
+
+  document.getElementById('formTitle').textContent = 'ไปแล้ว! ใส่รีวิวร้านนี้ 🎉';
+  document.getElementById('f_name').value = rec.name || '';
+  if (rec.description) document.getElementById('f_review').value = rec.description;
+  if (rec.photo) {
+    pendingPhotoData = rec.photo;
+    photoAction = 'new';
+    showPhotoPreview(rec.photo);
+  }
+}
+
 /* ---------- ร้านที่น่าสนใจ (wishlist): render ---------- */
 function renderInteresting() {
   const grid = document.getElementById('interestingGrid');
@@ -868,7 +894,8 @@ function renderInteresting() {
 
         ${r.description ? `<p class="mt-2 text-sm text-charcoal/70">${escapeHtml(r.description)}</p>` : ''}
 
-        <div class="mt-4">
+        <div class="mt-4 space-y-2">
+          <button onclick="convertToVisited('${r.id}')" class="block w-full text-center text-xs font-medium bg-ember text-white rounded-full py-1.5 hover:bg-emberdk">✅ ไปแล้ว! ใส่รีวิว</button>
           ${r.reviewLink ? `<a href="${escapeAttr(r.reviewLink)}" target="_blank" class="block text-center text-xs font-medium border border-gold text-emberdk rounded-full py-1.5 hover:bg-gold/10">🔗 ดูรีวิว</a>` : `<span class="block text-center text-xs text-charcoal/30 border border-line rounded-full py-1.5">🔗 ไม่มีลิงก์รีวิว</span>`}
         </div>
       </div>
