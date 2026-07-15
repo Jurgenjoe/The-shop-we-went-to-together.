@@ -248,6 +248,13 @@
       <p id="photoHint" class="text-xs text-charcoal/40 mt-1"></p>
     </div>
 
+    <label class="block text-sm font-medium mb-1">รูปหลังไปกิน (ใส่ได้หลายรูป)</label>
+    <div class="mb-3">
+      <div id="extraPhotosGallery" class="flex flex-wrap gap-2 mb-2"></div>
+      <input id="f_extraPhotos" type="file" accept="image/*" multiple onchange="handleExtraPhotosSelect(event)" class="w-full text-sm px-3 py-2 rounded-lg border border-line bg-white file:mr-3 file:px-3 file:py-1.5 file:rounded-full file:border-0 file:bg-ember file:text-white file:text-xs file:cursor-pointer cursor-pointer">
+      <p id="extraPhotosHint" class="text-xs text-charcoal/40 mt-1">เลือกได้ทีละหลายรูป — ไม่ต้องโชว์หน้าหลัก แค่เก็บไว้ในนี้</p>
+    </div>
+
     <label class="block text-sm font-medium mb-1">คะแนนความคุ้มค่า</label>
     <div id="valueStars" class="flex gap-1 mb-3 text-2xl"></div>
 
@@ -610,6 +617,59 @@ function removePhoto() {
   document.getElementById('photoPreview').src = '';
 }
 
+/* ---------- Extra photos (หลังไปกิน — ใส่ได้หลายรูป, ไม่โชว์หน้าหลัก แค่เก็บไว้) ---------- */
+let extraPhotosExisting = []; // รูปที่เคยบันทึกไว้แล้วของร้านนี้ (ตอนแก้ไข)
+let extraPhotosNew = [];      // รูปใหม่ที่เพิ่งเลือก ยังไม่ได้กดบันทึก
+const EXTRA_PHOTOS_MAX = 12;  // กันไม่ให้เอกสารต่อร้านใน Firestore ใหญ่เกิน 1MiB
+
+function renderExtraPhotosGallery() {
+  const wrap = document.getElementById('extraPhotosGallery');
+  const thumbs = [
+    ...extraPhotosExisting.map((src, i) => ({ src, kind: 'existing', i })),
+    ...extraPhotosNew.map((src, i) => ({ src, kind: 'new', i })),
+  ];
+  wrap.innerHTML = thumbs.map(t => `
+    <div class="relative inline-block">
+      <img src="${t.src}" class="h-16 w-16 object-cover rounded-lg border border-line cursor-zoom-in" onclick="openLightbox('${t.src}')">
+      <button type="button" onclick="removeExtraPhoto('${t.kind}', ${t.i})" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-charcoal/70 hover:bg-sauce text-white text-xs flex items-center justify-center" title="ลบรูป">&times;</button>
+    </div>
+  `).join('');
+  const hint = document.getElementById('extraPhotosHint');
+  const total = extraPhotosExisting.length + extraPhotosNew.length;
+  hint.textContent = total >= EXTRA_PHOTOS_MAX
+    ? `ครบ ${EXTRA_PHOTOS_MAX} รูปแล้ว (สูงสุดต่อร้าน)`
+    : 'เลือกได้ทีละหลายรูป — ไม่ต้องโชว์หน้าหลัก แค่เก็บไว้ในนี้';
+}
+
+async function handleExtraPhotosSelect(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  const remaining = EXTRA_PHOTOS_MAX - (extraPhotosExisting.length + extraPhotosNew.length);
+  if (remaining <= 0) {
+    alert(`ใส่รูปได้สูงสุด ${EXTRA_PHOTOS_MAX} รูปต่อร้านนะ (กันไฟล์ข้อมูลใหญ่เกินไป)`);
+    event.target.value = '';
+    return;
+  }
+  const toProcess = files.slice(0, remaining);
+  for (const file of toProcess) {
+    try {
+      // ย่อรูปให้เล็กกว่ารูปหน้าร้านหน่อย เพราะมีได้หลายรูปต่อร้าน ต้องคุมขนาดรวมไม่ให้เกิน 1MiB/ร้าน
+      const dataUrl = await compressImage(file, 700, 0.6);
+      extraPhotosNew.push(dataUrl);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+  renderExtraPhotosGallery();
+  event.target.value = '';
+}
+
+function removeExtraPhoto(kind, i) {
+  if (kind === 'existing') extraPhotosExisting.splice(i, 1);
+  else extraPhotosNew.splice(i, 1);
+  renderExtraPhotosGallery();
+}
+
 /* ---------- Page switcher (visited log vs. wishlist) ---------- */
 function setPage(page) {
   state.page = page;
@@ -676,6 +736,10 @@ function openForm(editing) {
   document.getElementById('photoPreviewWrap').classList.add('hidden');
   document.getElementById('photoPreview').src = '';
   document.getElementById('photoHint').textContent = '';
+  extraPhotosExisting = [];
+  extraPhotosNew = [];
+  document.getElementById('f_extraPhotos').value = '';
+  renderExtraPhotosGallery();
 
   if (editing) {
     document.getElementById('formTitle').textContent = 'แก้ไขร้าน';
@@ -692,6 +756,8 @@ function openForm(editing) {
     state.valueScore = editing.valueScore || 0;
     state.sauceScore = editing.sauceScore || 0;
     if (editing.photo) showPhotoPreview(editing.photo);
+    if (Array.isArray(editing.photos)) extraPhotosExisting = [...editing.photos];
+    renderExtraPhotosGallery();
   }
 
   renderStarPicker('valueStars', 'valueScore', '⭐');
@@ -733,6 +799,7 @@ async function submitForm(e) {
     mapLink: document.getElementById('f_mapLink').value.trim(),
     fbLink: document.getElementById('f_fbLink').value.trim(),
     photo: photo,
+    photos: [...extraPhotosExisting, ...extraPhotosNew],
     createdAt: id ? (existing?.createdAt || Date.now()) : Date.now(),
   };
 
